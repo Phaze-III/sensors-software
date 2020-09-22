@@ -3282,15 +3282,15 @@ static void fetchSensorGPS(String& s) {
 		} else {
 			debug_outln_verbose(F("Time: INVALID"));
 		}
-		if (gps.date.isValid() && gps.time.isValid()) {
-			char gps_datetime[37];
-			snprintf_P(gps_datetime, sizeof(gps_datetime), PSTR("%04d-%02d-%02dT%02d:%02d:%02d.%03d"),
-				gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second(), gps.time.centisecond());
-			last_value_GPS_datetime = gps_datetime;
-		} else {
+		//Xif (gps.date.isValid() && gps.time.isValid()) {
+		//X	char gps_datetime[37];
+		//X	snprintf_P(gps_datetime, sizeof(gps_datetime), PSTR("%04d-%02d-%02dT%02d:%02d:%02d.%03d"),
+		//X		gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second(), gps.time.centisecond());
+		//X	last_value_GPS_datetime = gps_datetime;
+		//X} else {
 			//define a default value
 			last_value_GPS_datetime = F("1970-01-01T00:00:00.000");
-		}
+		//X}
 	}
 
 	if (send_now) {
