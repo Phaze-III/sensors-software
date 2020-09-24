@@ -3288,10 +3288,10 @@ static void fetchSensorGPS(String& s) {
 				gps.time.hour(), gps.time.minute(), gps.time.second(), gps.time.centisecond());
 			last_value_GPS_time = gps_time;
 			if (gps.date.isValid()) {
-			//X	char gps_datetime[37];
-			//X	snprintf_P(gps_datetime, sizeof(gps_datetime), PSTR("%04d-%02d-%02dT%02d:%02d:%02d.%03d"),
-			//X		gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second(), gps.time.centisecond());
-			//X	last_value_GPS_datetime = gps_datetime;
+				char gps_datetime[37];
+				snprintf_P(gps_datetime, sizeof(gps_datetime), PSTR("%04d-%02d-%02dT%02d:%02d:%02d.%03d"),
+					gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second(), gps.time.centisecond());
+				last_value_GPS_datetime = gps_datetime;
 			}
 		} else {
 			debug_outln_verbose(F("Time: INVALID"));
