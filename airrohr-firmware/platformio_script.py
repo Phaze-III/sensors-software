@@ -28,7 +28,8 @@ def after_build(source, target, env):
     sectionName = 'env:' + configName.decode('utf-8')
     lang = config.get(sectionName, "lang")
     target_name = lang
-    shutil.copy(target[0].path, "./builds/latest_"+target_name.lower()+".bin")
+    version = os.getenv('FirmwareVersion',"latest")
+    shutil.copy(target[0].path, "./builds/"+version+"_"+target_name.lower()+".bin")
 
 
 env.AddPostAction("$BUILD_DIR/firmware.bin", after_build)
