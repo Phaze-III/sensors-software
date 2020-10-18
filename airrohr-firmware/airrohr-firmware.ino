@@ -2529,7 +2529,7 @@ static void fetchSensorSDS(String& s) {
 /*****************************************************************
  * read Plantronic PM sensor sensor values                       *
  *****************************************************************/
-static __noinline void fetchSensorPMS(String& s) {
+static void fetchSensorPMS(String& s) {
 	char buffer;
 	int value;
 	int len = 0;
@@ -2683,7 +2683,7 @@ static __noinline void fetchSensorPMS(String& s) {
 /*****************************************************************
  * read Honeywell PM sensor sensor values                        *
  *****************************************************************/
-static __noinline void fetchSensorHPM(String& s) {
+static void fetchSensorHPM(String& s) {
 	char buffer;
 	int value;
 	int len = 0;
@@ -3097,7 +3097,7 @@ static void fetchSensorNPM(String& s) {
 /*****************************************************************
  * read PPD42NS sensor values                                    *
  *****************************************************************/
-static __noinline void fetchSensorPPD(String& s) {
+static void fetchSensorPPD(String& s) {
 	debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(SENSORS_PPD42NS));
 
 	if (msSince(starttime) <= SAMPLETIME_MS) {
@@ -3254,7 +3254,7 @@ static void fetchSensorDNMS(String& s) {
 /*****************************************************************
  * read GPS sensor values                                        *
  *****************************************************************/
-static __noinline void fetchSensorGPS(String& s) {
+static void fetchSensorGPS(String& s) {
 	debug_outln_verbose(FPSTR(DBG_TXT_START_READING), "GPS");
 
 	if (gps.location.isUpdated()) {
