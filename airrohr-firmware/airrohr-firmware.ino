@@ -4517,6 +4517,7 @@ void loop(void) {
 		starttime = millis();								// store the start time
 		count_sends++;
 	}
+	yield();
 #if defined(ESP8266)
 	MDNS.update();
 	serialSDS.perform_work();
