@@ -60,7 +60,7 @@
 #include <pgmspace.h>
 
 // increment on change
-#define SOFTWARE_VERSION_STR "NRZ-2020-130-B10"
+#define SOFTWARE_VERSION_STR "NRZ-2020-131"
 String SOFTWARE_VERSION(SOFTWARE_VERSION_STR);
 
 /*****************************************************************
@@ -1488,10 +1488,11 @@ static void webserver_values() {
 		page_content += FPSTR(EMPTY_ROW);
 	}
 	if (cfg::bmx280_read) {
-		add_table_t_value(FPSTR(SENSORS_BMX280), FPSTR(INTL_TEMPERATURE), last_value_BMX280_T);
-		add_table_value(FPSTR(SENSORS_BMX280), FPSTR(INTL_PRESSURE), check_display_value(last_value_BMX280_P / 100.0f, (-1 / 100.0f), 2, 0), unit_P);
+		const char* const sensor_name = (bmx280.sensorID() == BME280_SENSOR_ID) ? SENSORS_BME280 : SENSORS_BMP280;
+		add_table_t_value(FPSTR(sensor_name), FPSTR(INTL_TEMPERATURE), last_value_BMX280_T);
+		add_table_value(FPSTR(sensor_name), FPSTR(INTL_PRESSURE), check_display_value(last_value_BMX280_P / 100.0f, (-1 / 100.0f), 2, 0), unit_P);
 		if (bmx280.sensorID() == BME280_SENSOR_ID) {
-			add_table_h_value(FPSTR(SENSORS_BMX280), FPSTR(INTL_HUMIDITY), last_value_BME280_H);
+			add_table_h_value(FPSTR(sensor_name), FPSTR(INTL_HUMIDITY), last_value_BME280_H);
 		}
 		page_content += FPSTR(EMPTY_ROW);
 	}
@@ -2406,7 +2407,8 @@ static void fetchSensorSHT3x(String& s) {
  * read BMP280/BME280 sensor values                              *
  *****************************************************************/
 static void fetchSensorBMX280(String& s) {
-	debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(SENSORS_BMX280));
+	const char* const sensor_name = (bmx280.sensorID() == BME280_SENSOR_ID) ? SENSORS_BME280 : SENSORS_BMP280;
+	debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(sensor_name));
 
 	bmx280.takeForcedMeasurement();
 	const auto t = bmx280.readTemperature();
@@ -2431,7 +2433,7 @@ static void fetchSensorBMX280(String& s) {
 		}
 	}
 	debug_outln_info(FPSTR(DBG_TXT_SEP));
-	debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(SENSORS_BMX280));
+	debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(sensor_name));
 }
 
 /*****************************************************************
@@ -3117,7 +3119,7 @@ static void fetchSensorNPM(String& s) {
 /*****************************************************************
  * read PPD42NS sensor values                                    *
  *****************************************************************/
-static void fetchSensorPPD(String& s) {
+static __noinline void fetchSensorPPD(String& s) {
 	debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(SENSORS_PPD42NS));
 
 	if (msSince(starttime) <= SAMPLETIME_MS) {
@@ -3226,7 +3228,6 @@ static void fetchSensorSPS30(String& s) {
 /*****************************************************************
    read DNMS values
  *****************************************************************/
-
 static void fetchSensorDNMS(String& s) {
 	static bool dnms_error = false;
 	debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(SENSORS_DNMS));
@@ -3271,6 +3272,7 @@ static void fetchSensorDNMS(String& s) {
 	debug_outln_info(FPSTR(DBG_TXT_SEP));
 	debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(SENSORS_DNMS));
 }
+
 /*****************************************************************
  * read GPS sensor values                                        *
  *****************************************************************/
@@ -3617,11 +3619,11 @@ static void display_values() {
 		p_value = last_value_BMP_P;
 	}
 	if (cfg::bmx280_read) {
-		t_sensor = p_sensor = FPSTR(SENSORS_BMX280);
+		t_sensor = p_sensor = FPSTR(SENSORS_BMP280);
 		t_value = last_value_BMX280_T;
 		p_value = last_value_BMX280_P;
 		if (bmx280.sensorID() == BME280_SENSOR_ID) {
-			h_sensor = FPSTR(SENSORS_BMX280);
+			h_sensor = t_sensor = FPSTR(SENSORS_BME280);
 			h_value = last_value_BME280_H;
 		}
 	}
@@ -3870,7 +3872,7 @@ static void init_display() {
  * Init BMP280/BME280                                            *
  *****************************************************************/
 static bool initBMX280(char addr) {
-	debug_out(String(F("Trying BMP280/BME280 sensor on ")) + String(addr, HEX), DEBUG_MIN_INFO);
+	debug_out(String(F("Trying BMx280 sensor on ")) + String(addr, HEX), DEBUG_MIN_INFO);
 
 	if (bmx280.begin(addr)) {
 		debug_outln_info(FPSTR(DBG_TXT_FOUND));
@@ -4053,9 +4055,9 @@ static void powerOnTestSensors() {
 	}
 
 	if (cfg::bmx280_read) {
-		debug_outln_info(F("Read BMP280/BME280..."));
+		debug_outln_info(F("Read BMxE280..."));
 		if (!initBMX280(0x76) && !initBMX280(0x77)) {
-			debug_outln_error(F("Check BMP280/BME280 wiring"));
+			debug_outln_error(F("Check BMx280 wiring"));
 			bmx280_init_failed = true;
 		}
 	}
@@ -4456,9 +4458,9 @@ void loop(void) {
 			fetchSensorBMX280(result);
 			data += result;
 			if (bmx280.sensorID() == BME280_SENSOR_ID) {
-				sum_send_time += sendSensorCommunity(result, BME280_API_PIN, FPSTR(SENSORS_BMX280), "BME280_");
+				sum_send_time += sendSensorCommunity(result, BME280_API_PIN, FPSTR(SENSORS_BME280), "BME280_");
 			} else {
-				sum_send_time += sendSensorCommunity(result, BMP280_API_PIN, FPSTR(SENSORS_BMX280), "BMP280_");
+				sum_send_time += sendSensorCommunity(result, BMP280_API_PIN, FPSTR(SENSORS_BMP280), "BMP280_");
 			}
 			result = emptyString;
 		}
@@ -4491,6 +4493,7 @@ void loop(void) {
 		add_Value2Json(data, F("samples"), String(sample_count));
 		add_Value2Json(data, F("min_micro"), String(min_micro));
 		add_Value2Json(data, F("max_micro"), String(max_micro));
+		add_Value2Json(data, F("interval"), String(cfg::sending_intervall_ms));
 		add_Value2Json(data, F("signal"), String(last_signal_strength));
 
 		if ((unsigned)(data.lastIndexOf(',') + 1) == data.length()) {
