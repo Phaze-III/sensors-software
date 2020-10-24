@@ -60,7 +60,7 @@
 #include <pgmspace.h>
 
 // increment on change
-#define SOFTWARE_VERSION_STR "NRZ-2020-131"
+#define SOFTWARE_VERSION_STR "NRZ-2020-132-B2"
 String SOFTWARE_VERSION(SOFTWARE_VERSION_STR);
 
 /*****************************************************************
@@ -639,18 +639,18 @@ static void readConfig(bool oldconfig = false) {
 				continue;
 			}
 			switch (c.cfg_type) {
-				case Config_Type_Bool:
-					*(c.cfg_val.as_bool) = boolFromJSON(json, c.cfg_key());
-					break;
-				case Config_Type_UInt:
-				case Config_Type_Time:
-					*(c.cfg_val.as_uint) = json[c.cfg_key()].as<unsigned int>();
-					break;
-				case Config_Type_String:
-				case Config_Type_Password:
-					strncpy(c.cfg_val.as_str, json[c.cfg_key()].as<char*>(), c.cfg_len);
-					c.cfg_val.as_str[c.cfg_len] = '\0';
-					break;
+			case Config_Type_Bool:
+				*(c.cfg_val.as_bool) = boolFromJSON(json, c.cfg_key());
+				break;
+			case Config_Type_UInt:
+			case Config_Type_Time:
+				*(c.cfg_val.as_uint) = json[c.cfg_key()].as<unsigned int>();
+				break;
+			case Config_Type_String:
+			case Config_Type_Password:
+				strncpy(c.cfg_val.as_str, json[c.cfg_key()].as<char*>(), c.cfg_len);
+				c.cfg_val.as_str[c.cfg_len] = '\0';
+				break;
 			};
 		}
 		String writtenVersion(json["SOFTWARE_VERSION"].as<char*>());
@@ -1807,19 +1807,19 @@ static void webserver_data_json() {
 }
 
 /*****************************************************************
- * Webserver prometheus metrics endpoint                         *
+ * Webserver metrics endpoint                                    *
  *****************************************************************/
-static void webserver_prometheus_endpoint() {
-	debug_outln_info(F("ws: prometheus endpoint..."));
-	String page_content = F("software_version{version=\"" SOFTWARE_VERSION_STR "\",{id}} 1\nuptime_ms{{id}} {up}\nsending_intervall_ms{{id}} {si}\nnumber_of_measurements{{id}} {cs}\n");
-	debug_outln_info(F("Parse JSON for Prometheus"));
+static void webserver_metrics_endpoint() {
+	debug_outln_info(F("ws: /metrics"));
+	RESERVE_STRING(page_content, XLARGE_STR);
+	page_content = F("software_version{version=\"" SOFTWARE_VERSION_STR "\",$i} 1\nuptime_ms{$i} $u\nsending_intervall_ms{$i} $s\nnumber_of_measurements{$i} $c\n");
 	String id(F("node=\"" SENSOR_BASENAME));
 	id += esp_chipid;
 	id += '\"';
-	page_content.replace("{id}", id);
-	page_content.replace("{up}", String(msSince(time_point_device_start_ms)));
-	page_content.replace("{si}", String(cfg::sending_intervall_ms));
-	page_content.replace("{cs}", String(count_sends));
+	page_content.replace("$i", id);
+	page_content.replace("$u", String(msSince(time_point_device_start_ms)));
+	page_content.replace("$s", String(cfg::sending_intervall_ms));
+	page_content.replace("$c", String(count_sends));
 	DynamicJsonDocument json2data(JSON_BUFFER_SIZE);
 	DeserializationError err = deserializeJson(json2data, last_data_string);
 	if (!err) {
@@ -1839,6 +1839,7 @@ static void webserver_prometheus_endpoint() {
 	} else {
 		debug_outln_error(FPSTR(DBG_TXT_DATA_READ_FAILED));
 	}
+	page_content += F("# EOF\n");
 	debug_outln(page_content, DEBUG_MED_INFO);
 	server.send(200, FPSTR(TXT_CONTENT_TYPE_TEXT_PLAIN), page_content);
 }
@@ -1894,7 +1895,7 @@ static void setup_webserver() {
 	server.on(F("/removeConfig"), webserver_removeConfig);
 	server.on(F("/reset"), webserver_reset);
 	server.on(F("/data.json"), webserver_data_json);
-	server.on(F("/metrics"), webserver_prometheus_endpoint);
+	server.on(F("/metrics"), webserver_metrics_endpoint);
 	server.on(F(STATIC_PREFIX), webserver_static);
 	server.onNotFound(webserver_not_found);
 
