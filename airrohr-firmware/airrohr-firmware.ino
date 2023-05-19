@@ -5695,7 +5695,7 @@ static unsigned long sendDataToOptionalApis(const String &data)
 	{
 		debug_outln_info(FPSTR(DBG_TXT_SENDING_TO), F("opensensemap: "));
 		String sensemap_path(tmpl(FPSTR(URL_SENSEMAP), cfg::senseboxid));
-		sum_send_time += sendData(LoggerSensemap, data, 0, HOST_SENSEMAP, sensemap_path.c_str(), false);
+		sum_send_time += sendData(LoggerSensemap, data, 0, HOST_SENSEMAP, sensemap_path.c_str(), true);
 	}
 
 	if (cfg::send2fsapp)
