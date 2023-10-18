@@ -411,7 +411,7 @@ void SDS_rawcmd(const uint8_t cmd_head1, const uint8_t cmd_head2, const uint8_t 
 	buf[16] = 0xFF;
 	buf[17] = cmd_head1 + cmd_head2 + cmd_head3 - 2;
 	buf[18] = 0xAB;
-	serialSDS.write(buf, cmd_len);
+	serialPMS.write(buf, cmd_len);
 }
 
 bool SDS_cmd(PmSensorCmd cmd) {
@@ -459,7 +459,38 @@ bool PMS_cmd(PmSensorCmd cmd) {
 		memcpy_P(buf, continuous_mode_cmd, cmd_len);
 		break;
 	}
-	serialSDS.write(buf, cmd_len);
+	serialPMS.write(buf, cmd_len);
+	return cmd != PmSensorCmd::Stop;
+}
+
+/*****************************************************************
+ * send 2nd Plantower PMS sensor command start, stop, cont. mode     *
+ *****************************************************************/
+bool PMS2_cmd(PmSensorCmd cmd) {
+	static constexpr uint8_t start_cmd[] PROGMEM = {
+		0x42, 0x4D, 0xE4, 0x00, 0x01, 0x01, 0x74
+	};
+	static constexpr uint8_t stop_cmd[] PROGMEM = {
+		0x42, 0x4D, 0xE4, 0x00, 0x00, 0x01, 0x73
+	};
+	static constexpr uint8_t continuous_mode_cmd[] PROGMEM = {
+		0x42, 0x4D, 0xE1, 0x00, 0x01, 0x01, 0x71
+	};
+	constexpr uint8_t cmd_len = array_num_elements(start_cmd);
+
+	uint8_t buf[cmd_len];
+	switch (cmd) {
+	case PmSensorCmd::Start:
+		memcpy_P(buf, start_cmd, cmd_len);
+		break;
+	case PmSensorCmd::Stop:
+		memcpy_P(buf, stop_cmd, cmd_len);
+		break;
+	case PmSensorCmd::ContinuousMode:
+		memcpy_P(buf, continuous_mode_cmd, cmd_len);
+		break;
+	}
+	serialPMS2.write(buf, cmd_len);
 	return cmd != PmSensorCmd::Stop;
 }
 
@@ -490,7 +521,7 @@ bool HPM_cmd(PmSensorCmd cmd) {
 		memcpy_P(buf, continuous_mode_cmd, cmd_len);
 		break;
 	}
-	serialSDS.write(buf, cmd_len);
+	serialPMS.write(buf, cmd_len);
 	return cmd != PmSensorCmd::Stop;
 }
 

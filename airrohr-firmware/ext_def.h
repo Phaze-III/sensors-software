@@ -114,13 +114,12 @@ static const char MEASUREMENT_NAME_INFLUX[] PROGMEM = "feinstaub";
 #define PM_SERIAL_RX D1
 #define PM_SERIAL_TX D2
 
+#define PM_SERIAL_RX2 D5
+#define PM_SERIAL_TX2 D6
+
 // define pins for I2C
 #define I2C_PIN_SCL D4
 #define I2C_PIN_SDA D3
-
-// define serial interface pins for GPS modules
-#define GPS_SERIAL_RX D5
-#define GPS_SERIAL_TX D6
 
 // define serial interface pins for Next PM Sensor
 #define NPM_SERIAL_RX D1
@@ -131,8 +130,8 @@ static const char MEASUREMENT_NAME_INFLUX[] PROGMEM = "feinstaub";
 #define IPS_SERIAL_TX D2
 
 // PPD42NS, the cheaper version of the particle sensor
-#define PPD_PIN_PM1 GPS_SERIAL_TX
-#define PPD_PIN_PM2 GPS_SERIAL_RX
+#define PPD_PIN_PM1 PM_SERIAL_TX2
+#define PPD_PIN_PM2 PM_SERIAL_RX2
 #endif
 
 
@@ -243,6 +242,9 @@ static const char MEASUREMENT_NAME_INFLUX[] PROGMEM = "feinstaub";
 // PMS1003, PMS300, 3PMS5003, PMS6003, PMS7003
 #define PMS_READ 0
 #define PMS_API_PIN 1
+
+#define PMS2_READ 0
+#define PMS2_API_PIN 1
 
 // Honeywell PM sensor
 #define HPM_READ 0

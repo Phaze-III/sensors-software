@@ -83,13 +83,14 @@ namespace cfg {
 }
 
 #if defined(ESP8266)
-extern SoftwareSerial serialSDS;
+extern SoftwareSerial serialPMS;
 extern SoftwareSerial serialNPM;
 extern SoftwareSerial serialIPS;
+extern SoftwareSerial serialPMS2;
 #endif
 #if defined(ESP32)
-#define serialSDS (Serial1)
-#define serialGPS (&(Serial2))
+#define serialPMS (Serial1)
+#define serialPMS2 (&(Serial2))
 #define serialNPM (Serial1)
 #define serialIPS (Serial1)
 #endif
@@ -168,6 +169,7 @@ extern bool SDS_checksum_valid(const uint8_t (&data)[8]);
 extern void SDS_rawcmd(const uint8_t cmd_head1, const uint8_t cmd_head2, const uint8_t cmd_head3);
 extern bool SDS_cmd(PmSensorCmd cmd);
 extern bool PMS_cmd(PmSensorCmd cmd);
+extern bool PMS2_cmd(PmSensorCmd cmd);
 extern bool HPM_cmd(PmSensorCmd cmd);
 extern void NPM_cmd(PmSensorCmd2 cmd);
 extern void IPS_cmd(PmSensorCmd3 cmd);
