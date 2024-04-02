@@ -18,7 +18,9 @@ Bool		hpm_read
 Bool		npm_read
 Bool        npm_fulltime
 Bool		ips_read
+#ifdef SEN5X
 Bool		sen5x_read
+#endif /* SEN5X */
 Bool		sps30_read
 Bool		bmp_read
 Bool		bmx280_read

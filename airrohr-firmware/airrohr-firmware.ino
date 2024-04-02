@@ -108,12 +108,13 @@ String SOFTWARE_VERSION(SOFTWARE_VERSION_STR);
 #include <StreamString.h>
 #include <DallasTemperature.h>
 #include <SparkFun_SCD30_Arduino_Library.h>
+#ifdef SEN5X
 #include <SensirionI2CSen5x.h>
+#endif /* SEN5X */
 #include <TinyGPS++.h>
 #include "./bmx280_i2c.h"
 #include "./sps30_i2c.h"
 #include "./dnms_i2c.h"
-// #include "./SensirionI2CSen5x.h"
 
 #include "./intl.h"
 
@@ -169,7 +170,9 @@ namespace cfg
 	bool npm_read = NPM_READ;
 	bool npm_fulltime = NPM_FULLTIME;
 	bool ips_read = IPS_READ;
+#ifdef SEN5X
 	bool sen5x_read = SEN5X_READ;
+#endif /* SEN5X */
 	bool sps30_read = SPS30_READ;
 	bool bmp_read = BMP_READ;
 	bool bmx280_read = BMX280_READ;
@@ -349,10 +352,12 @@ Adafruit_SHT31 sht3x;
 OneWire oneWire;
 DallasTemperature ds18b20(&oneWire);
 
+#ifdef SEN5X
 /*****************************************************************
  * SEN5X declaration                                             *
  *****************************************************************/
 SensirionI2CSen5x sen5x;
+#endif /* SEN5X */
 
 /*****************************************************************
  * SCD30 declaration                                             *
@@ -560,6 +565,7 @@ unsigned long ips_pm5_min_pcs = 4000000000;
 unsigned long  ips_pm10_max_pcs = 0;
 unsigned long  ips_pm10_min_pcs = 4000000000;
 
+#ifdef SEN5X
 float last_value_SEN5X_P0 = -1.0;
 float last_value_SEN5X_P1 = -1.0;
 float last_value_SEN5X_P2 = -1.0;
@@ -594,6 +600,7 @@ unsigned long SEN5X_read_counter = 0;
 unsigned long SEN5X_read_error_counter = 0;
 unsigned long SEN5X_read_timer = 0;
 bool sen5x_init_failed = false;
+#endif /* SEN5X */
 
 float last_value_SPS30_P0 = -1.0;
 float last_value_SPS30_P1 = -1.0;
@@ -1108,11 +1115,10 @@ static String IPS_version_date()
 	return last_value_IPS_version;
 }
 
-
+#ifdef SEN5X
 /*****************************************************************
- * read SEN5X sensor serial and firmware date                   *
+ * read SEN5X sensor serial and firmware date                    *
  *****************************************************************/
-
 
 unsigned char SEN5X_type[6];
 
@@ -1189,6 +1195,7 @@ void printSerialNumber() {
         Debug.println((char*)serialNumber);
     }
 }
+#endif /* SEN5X */
 
 
 /*****************************************************************
@@ -1910,7 +1917,9 @@ static void webserver_config_send_body_get(String &page_content)
 	add_form_checkbox_sensor(Config_npm_read, FPSTR(INTL_NPM));
 	add_form_checkbox_sensor(Config_npm_fulltime, FPSTR(INTL_NPM_FULLTIME));
 	add_form_checkbox_sensor(Config_ips_read, FPSTR(INTL_IPS));
+#ifdef SEN5X
 	add_form_checkbox_sensor(Config_sen5x_read, FPSTR(INTL_SEN5X));
+#endif /* SEN5X */
 	add_form_checkbox_sensor(Config_bmp_read, FPSTR(INTL_BMP180));
 	add_form_checkbox(Config_gps_read, FPSTR(INTL_NEO6M));
 
@@ -2298,6 +2307,7 @@ static void webserver_values()
 		page_content += FPSTR(EMPTY_ROW);
 	}
 
+#ifdef SEN5X
 	if (cfg::sen5x_read)
 	{
 
@@ -2356,6 +2366,7 @@ static void webserver_values()
 		page_content += FPSTR(EMPTY_ROW);
 		}
 	}
+#endif /* SEN5X */
 
 	if (cfg::sps30_read)
 	{
@@ -2583,6 +2594,7 @@ static void webserver_status()
 	{
 		add_table_row_from_value(page_content, FPSTR(SENSORS_IPS), String(IPS_error_count));
 	}
+#ifdef SEN5X
 	if (cfg::sen5x_read)
 	{
 		if(memcmp(SEN5X_type,"SEN50",6) == 0)
@@ -2600,6 +2612,7 @@ static void webserver_status()
 		add_table_row_from_value(page_content, FPSTR(SENSORS_SEN55), String(SEN5X_read_error_counter));
 		}
 	}
+#endif /* SEN5X */
 	if (cfg::sps30_read)
 	{
 		add_table_row_from_value(page_content, FPSTR(SENSORS_SPS30), String(SPS30_read_error_counter));
@@ -4607,8 +4620,7 @@ static void fetchSensorIPS(String &s)
 
 }
 
-
-
+#ifdef SEN5X
 /*****************************************************************
    read SEN5X PM sensor values
  *****************************************************************/
@@ -4698,6 +4710,7 @@ if(memcmp(SEN5X_type,"SEN55",6)!= 0)
 	debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(SENSORS_SEN55));
 	}
 }
+#endif /* SEN5X */
 
 
 /*****************************************************************
@@ -5178,9 +5191,13 @@ static void display_values()
 	float t_value = -128.0;
 	float h_value = -1.0;
 	float p_value = -1.0;
+#ifndef SEN5X
+	String t_sensor, h_sensor, p_sensor;
+#else /* SEN5X */
 	float voc_value = -1.0;
 	float nox_value = -1.0;
 	String t_sensor, h_sensor, p_sensor, voc_sensor, nox_sensor;
+#endif /* SEN5X */
 	float pm001_value = -1.0;
 	float pm003_value = -1.0;
 	float pm005_value = -1.0;
@@ -5215,7 +5232,11 @@ static void display_values()
 	String display_header;
 	String display_lines[3] = {"", "", ""};
 	uint8_t screen_count = 0;
+#ifndef SEN5X
+	uint8_t screens[8];
+#else /* SEN5X */
 	uint8_t screens[13];
+#endif /* SEN5X */
 	int line_count = 0;
 	debug_outln_info(F("output values to display..."));
 	if (cfg::ppd_read)
@@ -5275,6 +5296,7 @@ static void display_values()
 		nc005_value = last_value_IPS_N05;
 		nc050_value = last_value_IPS_N5;
 	}
+#ifdef SEN5X
 		if (cfg::sen5x_read)
 	{
 		if(memcmp(SEN5X_type,"SEN50",6) == 0)
@@ -5314,6 +5336,7 @@ static void display_values()
 		voc_value = last_value_SEN5X_VOC;
 		nox_value = last_value_SEN5X_NOX;
 	}
+#endif /* SEN5X */
 	if (cfg::sps30_read)
 	{
 		pm10_sensor = FPSTR(SENSORS_SPS30);
@@ -5401,11 +5424,13 @@ static void display_values()
 	{
 		screens[screen_count++] = 11;  //A VOIR POUR AJOUTER DES ÈCRANS
 	}
+#ifdef SEN5X
 	if (cfg::sen5x_read)
 	{
 		screens[screen_count++] = 12;  
 		screens[screen_count++] = 13; 
 	}
+#endif /* SEN5X */
 	if (cfg::sps30_read)
 	{
 		screens[screen_count++] = 2;
@@ -5550,6 +5575,7 @@ static void display_values()
 			display_lines[1] = std::move(tmpl(F("PM2.5: {v} µg/m³"), check_display_value(pm25_value, -1, 1, 6)));
 			display_lines[2] = std::move(tmpl(F("PM10: {v} µg/m³"), check_display_value(pm10_value, -1, 1, 6)));
 			break;
+#ifdef SEN5X
 		case 12:
 		    display_header = F("Sensirion SEN5X");
 			display_lines[0] = std::move(tmpl(F("PM1: {v} µg/m³"), check_display_value(pm01_value, -1, 1, 6)));
@@ -5577,6 +5603,7 @@ static void display_values()
 			}
 
 			break;
+#endif /* SEN5X */
 		}
 
 		if (oled_ssd1306)
@@ -5691,6 +5718,7 @@ static void display_values()
 			display_lines[1] = "PM2.5: ";
 			display_lines[1] += check_display_value(pm25_value, -1, 1, 6);
 			break;
+#ifdef SEN5X
 		case 12:
 			display_lines[0] = "PM1: ";
 			display_lines[0] += check_display_value(pm01_value, -1, 1, 6);
@@ -5703,6 +5731,7 @@ static void display_values()
 			display_lines[1] = "Humi.: ";
 			display_lines[1] += check_display_value(pm25_value, -1, 1, 6);
 			break;
+#endif /* SEN5X */
 		}
 
 		display_lines[0].replace("°", String(char(223)));
@@ -5804,6 +5833,7 @@ static bool initBMX280(char addr)
 	}
 }
 
+#ifdef SEN5X
 /*****************************************************************
    Init SEN5X Sensor
  *****************************************************************/
@@ -5845,6 +5875,7 @@ static void initSEN5X()
 		return;
     }
 }
+#endif /* SEN5X */
 
 /*****************************************************************
    Init SPS30 PM Sensor
@@ -6044,12 +6075,13 @@ static void powerOnTestSensors()
 	is_IPS_running = false;
 	}
 
-
+#ifdef SEN5X
 	if (cfg::sen5x_read)
 	{
 		debug_outln_info(F("Read SEN5X..."));
 		initSEN5X();
 	}
+#endif /* SEN5X */
 
 	if (cfg::sps30_read)
 	{
@@ -6482,8 +6514,7 @@ void loop(void)
 		}
 	}
 
-
-
+#ifdef SEN5X
 	if (cfg::sen5x_read && (!sen5x_init_failed))
 	{
 		if ((msSince(starttime) - SEN5X_read_timer) > SEN5X_WAITING_AFTER_LAST_READ)
@@ -6545,6 +6576,7 @@ void loop(void)
 		++SEN5X_measurement_count;
 		}
 	}
+#endif /* SEN5X */
 
 	if (cfg::ppd_read)
 	{
@@ -6651,6 +6683,7 @@ void loop(void)
 			data += result_IPS;
 			sum_send_time += sendSensorCommunity(result_IPS, IPS_API_PIN, FPSTR(SENSORS_IPS), "IPS_");
 		}
+#ifdef SEN5X
 		if (cfg::sen5x_read && (!sen5x_init_failed))
 		{
 			fetchSensorSEN5X(result);
@@ -6671,6 +6704,7 @@ void loop(void)
 		}
 			result = emptyString;
 		}
+#endif /* SEN5X */
 		if (cfg::sps30_read && (!sps30_init_failed))
 		{
 			fetchSensorSPS30(result);
