@@ -2930,6 +2930,7 @@ static void waitForWifiToConnect(int maxRetries)
 					// && addr.ifnumber() == STATION_IF
 					))
 				{
+					delay(5000); // Wait 5 seconds (seems needed with IPv6 autoconfig)
 					break;
 				}
 				delay(500);
