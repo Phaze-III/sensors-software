@@ -5981,8 +5981,8 @@ else if (cfg::ips_read)
 #endif
 
 	init_display();
-	setupNetworkTime();
 	connectWifi();
+	setupNetworkTime();
 	setup_webserver();
 	createLoggerConfigs();
 	debug_outln_info(F("\nChipId: "), esp_chipid);
