@@ -2900,6 +2900,7 @@ static void wifiConfig()
 
 static void waitForWifiToConnect(int maxRetries)
 {
+/*
 	int retryCount = 0;
 	while ((WiFi.status() != WL_CONNECTED) && (retryCount < maxRetries))
 	{
@@ -2907,6 +2908,36 @@ static void waitForWifiToConnect(int maxRetries)
 		debug_out(".", DEBUG_MIN_INFO);
 		++retryCount;
 	}
+*/
+	// Use this loop instead to wait for an IPv6 routable address
+
+	// addr->isLocal() (meaning "not routable on internet") is true with:
+	// - IPV4 DHCP autoconfigured address 169.254.x.x
+	//   (false for any other including 192.168./16 and 10./24 since NAT may be in the equation)
+	// - IPV6 link-local addresses (fe80::/64)
+	// This doesn't but should wait for IPv6 autoconfig to acquire a
+	// global scope address on a IPv6-enabled network, it now breaks
+	// from the loop after a routable IPv4 address is found which may
+	// happen before the IPv6 autoconfig is finished.
+
+	int retryCount = 0;
+	for (bool configured = false; !configured;) {
+		if (retryCount < maxRetries)
+		{
+			for (auto addr : addrList)
+				if ((configured = !addr.isLocal()
+					// && addr.isV6() // uncomment when IPv6 is mandatory
+					// && addr.ifnumber() == STATION_IF
+					))
+				{
+					break;
+				}
+				delay(500);
+				debug_out(".", DEBUG_MIN_INFO);
+				++retryCount;
+		}
+	}
+
 }
 
 /*****************************************************************
