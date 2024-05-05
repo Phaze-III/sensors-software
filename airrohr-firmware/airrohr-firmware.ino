@@ -2997,6 +2997,28 @@ static void connectWifi()
 		}
 	}
 	debug_outln_info(F("WiFi connected, IP is: "), WiFi.localIP().toString());
+
+	// Local address debugging
+	for (auto a : addrList)
+	{
+		Debug.printf("IF='%s' IPv6=%d local=%d hostname='%s' addr= %s",
+			a.ifname().c_str(),
+			a.isV6(),
+			a.isLocal(),
+			a.ifhostname(),
+			a.toString().c_str());
+
+		if (a.isLegacy())
+		{
+			Debug.printf(" / mask:%s / gw:%s",
+				a.netmask().toString().c_str(),
+				a.gw().toString().c_str());
+		}
+
+		Debug.println();
+	}
+	// End Local address debugging
+
 	last_signal_strength = WiFi.RSSI();
 
 	if (MDNS.begin(cfg::fs_ssid))
