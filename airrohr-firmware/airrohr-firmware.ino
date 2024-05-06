@@ -2900,7 +2900,7 @@ static void wifiConfig()
 
 static void waitForWifiToConnect(int maxRetries)
 {
-/*
+#if !LWIP_IPV6
 	int retryCount = 0;
 	while ((WiFi.status() != WL_CONNECTED) && (retryCount < maxRetries))
 	{
@@ -2908,7 +2908,7 @@ static void waitForWifiToConnect(int maxRetries)
 		debug_out(".", DEBUG_MIN_INFO);
 		++retryCount;
 	}
-*/
+#else
 	// Use this loop instead to wait for an IPv6 routable address
 
 	// addr->isLocal() (meaning "not routable on internet") is true with:
@@ -2938,6 +2938,7 @@ static void waitForWifiToConnect(int maxRetries)
 			break ;
 		}
 	}
+#endif
 }
 
 /*****************************************************************
@@ -3029,6 +3030,16 @@ static void connectWifi()
 	}
 	debug_outln_info(F("WiFi connected, IP is: "), WiFi.localIP().toString());
 
+#if LWIP_IPV6
+	for (auto a : addrList)
+	{
+		if (a.isV6() && !a.isLocal())
+		{
+			debug_outln_info(F("IPv6 is: "), a.toString().c_str());
+		}
+	}
+
+	/*
 	// Local address debugging
 	for (auto a : addrList)
 	{
@@ -3049,6 +3060,8 @@ static void connectWifi()
 		Debug.println();
 	}
 	// End Local address debugging
+	*/
+#endif
 
 	last_signal_strength = WiFi.RSSI();
 
