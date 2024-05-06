@@ -2921,23 +2921,23 @@ static void waitForWifiToConnect(int maxRetries)
 	// happen before the IPv6 autoconfig is finished.
 
 	int retryCount = 0;
-	for (bool configured = false; !configured;) {
-		if (retryCount < maxRetries)
-		{
-			for (auto addr : addrList)
-				if ((configured = !addr.isLocal()
-					&& addr.isV6() // uncomment when IPv6 is mandatory
-					// && addr.ifnumber() == STATION_IF
-					))
-				{
-					break;
-				}
-				delay(500);
-				debug_out(".", DEBUG_MIN_INFO);
-				++retryCount;
+	for (bool configured = false; !configured;)
+	{
+		for (auto addr : addrList)
+			if ((configured = !addr.isLocal()
+				&& addr.isV6() // uncomment when IPv6 is mandatory
+				// && addr.ifnumber() == STATION_IF
+				))
+			{
+				break;
+			}
+		delay(500);
+		debug_out(".", DEBUG_MIN_INFO);
+		++retryCount;
+		if (retryCount >= maxRetries) {
+			break ;
 		}
 	}
-
 }
 
 /*****************************************************************
