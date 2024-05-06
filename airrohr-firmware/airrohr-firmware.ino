@@ -2926,11 +2926,10 @@ static void waitForWifiToConnect(int maxRetries)
 		{
 			for (auto addr : addrList)
 				if ((configured = !addr.isLocal()
-					// && addr.isV6() // uncomment when IPv6 is mandatory
+					&& addr.isV6() // uncomment when IPv6 is mandatory
 					// && addr.ifnumber() == STATION_IF
 					))
 				{
-					delay(5000); // Wait 5 seconds (seems needed with IPv6 autoconfig)
 					break;
 				}
 				delay(500);
