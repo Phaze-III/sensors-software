@@ -3024,7 +3024,7 @@ static void connectWifi()
 
 	debug_outln_info(FPSTR(DBG_TXT_CONNECTING_TO), cfg::wlanssid);
 
-	waitForWifiToConnect(40);
+	waitForWifiToConnect(60);
 	debug_outln_info(emptyString);
 	if (WiFi.status() != WL_CONNECTED)
 	{
@@ -3040,7 +3040,7 @@ static void connectWifi()
 		wifiConfig();
 		if (WiFi.status() != WL_CONNECTED)
 		{
-			waitForWifiToConnect(20);
+			waitForWifiToConnect(60);
 			debug_outln_info(emptyString);
 		}
 	}
@@ -6362,7 +6362,7 @@ void loop(void)
 			debug_outln_info(F("Connection lost, reconnecting "));
 			WiFi_error_count++;
 			WiFi.reconnect();
-			waitForWifiToConnect(20);
+			waitForWifiToConnect(60);
 		}
 
 		// only do a restart after finishing sending
