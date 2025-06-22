@@ -635,7 +635,7 @@ unsigned long WiFi_error_count;
 unsigned long last_page_load = millis();
 
 bool wificonfig_loop = false;
-uint8_t sntp_time_set;
+uint16_t sntp_time_set;
 
 unsigned long count_sends = 0;
 unsigned long last_display_millis = 0;
