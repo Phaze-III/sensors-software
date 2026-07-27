@@ -51,14 +51,14 @@
  * latest build using lib 2.6.2
  * DATA:    [====      ]  41.7% (used 34128 bytes from 81920 bytes)
  * PROGRAM: [======    ]  67.2% (used 701371 bytes from 1044464 bytes)
- *  
+ *
  ************************************************************************/
- 
+
 #include <WString.h>
 #include <pgmspace.h>
 
 // increment on change
-#define SOFTWARE_VERSION_STR "NRZ-2024-136-B1+IPv6"
+#define SOFTWARE_VERSION_STR "NRZ-2024-136-B2+IPv6"
 String SOFTWARE_VERSION(SOFTWARE_VERSION_STR);
 
 /*****************************************************************
@@ -133,7 +133,7 @@ String SOFTWARE_VERSION(SOFTWARE_VERSION_STR);
 namespace cfg
 {
 	unsigned debug = DEBUG;
-	
+
 	unsigned time_for_wifi_config = 600000;
 	unsigned sending_intervall_ms = 145000;
 	bool powersave;
@@ -209,6 +209,8 @@ namespace cfg
 	bool ssl_madavi = SSL_MADAVI;
 	bool ssl_dusti = SSL_SENSORCOMMUNITY;
 	char senseboxid[LEN_SENSEBOXID] = SENSEBOXID;
+	char osem_device_api_key[LEN_OSEM_DEVICE_API_KEY] = OSEM_DEVICE_API_KEY;
+	char osem_alternate_host[LEN_OSEM_ALTERNATE_HOST] = OSEM_ALTERNATE_HOST;
 
 	char host_influx[LEN_HOST_INFLUX];
 	char url_influx[LEN_URL_INFLUX];
@@ -406,6 +408,7 @@ enum
 	NPM_REPLY_CHECKSUM_4 = 1
 } NPM_waiting_for_4; //for change
 
+#if defined (NPM_FORCE_FAN_SPEED) && (NPM_FORCE_FAN_SPEED>0)
 enum
 {
 	NPM_REPLY_HEADER_5 = 5,
@@ -413,6 +416,7 @@ enum
 	NPM_REPLY_DATA_5 = 2,
 	NPM_REPLY_CHECKSUM_5 = 1
 } NPM_waiting_for_5; //for fan speed
+#endif //NPM_FORCE_FAN_SPEED setting
 
 enum
 {
@@ -633,7 +637,7 @@ unsigned long WiFi_error_count;
 unsigned long last_page_load = millis();
 
 bool wificonfig_loop = false;
-uint8_t sntp_time_set;
+uint16_t sntp_time_set;
 
 unsigned long count_sends = 0;
 unsigned long last_display_millis = 0;
@@ -753,7 +757,7 @@ static String SDS_version_date()
  *****************************************************************/
 static uint8_t NPM_get_state()
 {
-	uint8_t result;
+	uint8_t result = 0xFF;
 	NPM_waiting_for_4 = NPM_REPLY_HEADER_4;
 	debug_outln_info(F("State NPM..."));
 	NPM_cmd(PmSensorCmd2::State);
@@ -801,7 +805,7 @@ static uint8_t NPM_get_state()
 
 static bool NPM_start_stop()
 {
-	bool result;
+	bool result(false);
 	NPM_waiting_for_4 = NPM_REPLY_HEADER_4;
 	debug_outln_info(F("Switch start/stop NPM..."));
 	NPM_cmd(PmSensorCmd2::Change);
@@ -922,7 +926,9 @@ static String NPM_version_date()
 	return last_value_NPM_version;
 }
 
-static void NPM_fan_speed()
+// recently nowhere called
+#if defined (NPM_FORCE_FAN_SPEED) && (NPM_FORCE_FAN_SPEED>0)
+void NPM_fan_speed()
 {
 
 	NPM_waiting_for_5 = NPM_REPLY_HEADER_5;
@@ -976,11 +982,12 @@ static void NPM_fan_speed()
 		}
 	}
 }
+#endif //NPM_FORCE_FAN_SPEED setting
 
-static String NPM_temp_humi() 
+static String NPM_temp_humi()
 {
-	uint16_t NPM_temp;
-	uint16_t NPM_humi;
+	uint16_t NPM_temp(0);
+	uint16_t NPM_humi(0);
 	NPM_waiting_for_8 = NPM_REPLY_HEADER_8;
 	debug_outln_info(F("Temperature/Humidity in Next PM..."));
 	NPM_cmd(PmSensorCmd2::Temphumi);
@@ -1500,6 +1507,7 @@ static String form_select_lang()
 				 "<option value='ES'>Español (ES)</option>"
 				 "<option value='FR'>Français (FR)</option>"
 				 "<option value='GR'>Ελληνικά (GR)</option>"
+				 "<option value='HR'>Hrvatski (HR)</option>"
 				 "<option value='IT'>Italiano (IT)</option>"
 				 "<option value='JP'>日本語 (JP)</option>"
 				 "<option value='LT'>Lietuvių kalba (LT)</option>"
@@ -1574,9 +1582,9 @@ static bool webserver_request_auth()
 static void sendHttpRedirect()
 {
 	const IPAddress defaultIP(
-		default_ip_first_octet, 
-		default_ip_second_octet, 
-		default_ip_third_octet, 
+		default_ip_first_octet,
+		default_ip_second_octet,
+		default_ip_third_octet,
 		default_ip_fourth_octet);
 
 	//String defaultAddress = F("http://") + defaultIP.toString() + F("/config");
@@ -1809,6 +1817,8 @@ static void webserver_config_send_body_get(String &page_content)
 	add_form_checkbox(Config_send2sensemap, FPSTR(WEB_OPENSENSEMAP));
 	page_content += FPSTR(TABLE_TAG_OPEN);
 	add_form_input(page_content, Config_senseboxid, F("senseBox&nbsp;ID"), LEN_SENSEBOXID - 1);
+	add_form_input(page_content, Config_osem_device_api_key, F("openSenseMap&nbsp;device&nbsp;API&nbsp;key"), LEN_OSEM_DEVICE_API_KEY - 1);
+	add_form_input(page_content, Config_osem_alternate_host, F("openSenseMap&nbsp;alternative&nbsp;host&nbsp;url"), LEN_OSEM_ALTERNATE_HOST - 1);
 
 	server.sendContent(page_content);
 	page_content = FPSTR(TABLE_TAG_CLOSE_BR);
@@ -2165,7 +2175,7 @@ static void webserver_values()
 		add_table_pm_value(FPSTR(SENSORS_IPS), FPSTR(WEB_PM10), last_value_IPS_P1);
 		add_table_nc_value(FPSTR(SENSORS_IPS), FPSTR(WEB_NC0k1), last_value_IPS_N01);
 		add_table_nc_value(FPSTR(SENSORS_IPS), FPSTR(WEB_NC0k3), last_value_IPS_N03);
-		add_table_nc_value(FPSTR(SENSORS_IPS), FPSTR(WEB_NC0k5), last_value_IPS_N05);	
+		add_table_nc_value(FPSTR(SENSORS_IPS), FPSTR(WEB_NC0k5), last_value_IPS_N05);
 		add_table_nc_value(FPSTR(SENSORS_IPS), FPSTR(WEB_NC1k0), last_value_IPS_N1);
 		add_table_nc_value(FPSTR(SENSORS_IPS), FPSTR(WEB_NC2k5), last_value_IPS_N25);
 		add_table_nc_value(FPSTR(SENSORS_IPS), FPSTR(WEB_NC5k0), last_value_IPS_N5);
@@ -2297,13 +2307,13 @@ static void webserver_status()
 #endif
 	versionHtml.replace("/", FPSTR(BR_TAG));
 	add_table_row_from_value(page_content, FPSTR(INTL_FIRMWARE), versionHtml);
-	add_table_row_from_value(page_content, F("Free Memory"), String(ESP.getFreeHeap()));
+	add_table_row_from_value(page_content, F(INTL_FREE_MEMORY), String(ESP.getFreeHeap()));
 #if defined(ESP8266)
-	add_table_row_from_value(page_content, F("Heap Fragmentation"), String(ESP.getHeapFragmentation()), "%");
+	add_table_row_from_value(page_content, F(INTL_HEAP_FRAGMENTATION), String(ESP.getHeapFragmentation()), "%");
 #endif
 	if (cfg::auto_update)
-	{
-		add_table_row_from_value(page_content, F("Last OTA"), delayToString(millis() - last_update_attempt));
+  {
+		add_table_row_from_value(page_content, F(INTL_LAST_OVER_THE_AIR), delayToString(millis() - last_update_attempt));
 	}
 #if defined(ESP8266)
 	add_table_row_from_value(page_content, F("NTP Sync"), String(sntp_time_set));
@@ -2320,7 +2330,7 @@ static void webserver_status()
 				ntpinfo.print(FPSTR(BR_TAG));
 			}
 			ntpinfo.printf_P(PSTR("%s (%s)"), IPAddress(*sntp).toString().c_str(), name ? name : "?");
-			ntpinfo.printf_P(PSTR(" reachable: %s"), sntp_getreachability(i) ? "Yes" : "No");
+			ntpinfo.printf_P(PSTR(" %s: %s"), F(INTL_REACHABLE), sntp_getreachability(i) ? F(INTL_YES) : F(INTL_NO));
 		}
 	}
 	add_table_row_from_value(page_content, F("NTP Info"), ntpinfo);
@@ -2328,9 +2338,9 @@ static void webserver_status()
 
 	time_t now = time(nullptr);
 	add_table_row_from_value(page_content, FPSTR(INTL_TIME_UTC), ctime(&now));
-	add_table_row_from_value(page_content, F("Uptime"), delayToString(millis() - time_point_device_start_ms));
+	add_table_row_from_value(page_content, F(INTL_UPTIME), delayToString(millis() - time_point_device_start_ms));
 #if defined(ESP8266)
-	add_table_row_from_value(page_content, F("Reset Reason"), ESP.getResetReason());
+	add_table_row_from_value(page_content, F(INTL_RESET_REASON), ESP.getResetReason());
 #endif
 	if (cfg::sds_read)
 	{
@@ -2382,9 +2392,9 @@ static void webserver_status()
 	}
 
 	if (last_sendData_returncode != 0)
-	{
-		add_table_row_from_value(page_content, F("Data Send Return"),
-								 last_sendData_returncode > 0 ? String(last_sendData_returncode) : HTTPClient::errorToString(last_sendData_returncode));
+  {
+		add_table_row_from_value(page_content, F(INTL_DATA_SEND_RETURN_CODE),
+			last_sendData_returncode > 0 ? String(last_sendData_returncode) : HTTPClient::errorToString(last_sendData_returncode));
 	}
 	if (cfg::sds_read)
 	{
@@ -2730,7 +2740,7 @@ static void setup_webserver()
 	server.on(F("/favicon.ico"), webserver_favicon);
 	server.on(F(STATIC_PREFIX), webserver_static);
 	server.onNotFound(webserver_not_found);
-	
+
 
 	debug_outln_info(F("Starting Webserver... "), WiFi.localIP().toString());
 	server.begin();
@@ -2820,11 +2830,11 @@ static void wifiConfig()
 
 	WiFi.mode(WIFI_AP);
 	const IPAddress apIP(
-		default_ip_first_octet, 
-		default_ip_second_octet, 
-		default_ip_third_octet, 
+		default_ip_first_octet,
+		default_ip_second_octet,
+		default_ip_third_octet,
 		default_ip_fourth_octet);
-		
+
 	WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
 	WiFi.softAP(cfg::fs_ssid, cfg::fs_pwd, selectChannelForAp());
 	// In case we create a unique password at first start
@@ -3159,7 +3169,10 @@ static unsigned long sendData(const LoggerEntry logger, const String &data, cons
 		{
 			http.addHeader(F("X-PIN"), String(pin));
 		}
-
+		if (cfg::send2sensemap && (*cfg::osem_device_api_key))
+		{
+			http.addHeader(F("x-osem-device-api-key"), String(cfg::osem_device_api_key));
+		}
 		result = http.POST(data);
 
 		if (result >= HTTP_CODE_OK && result <= HTTP_CODE_ALREADY_REPORTED)
@@ -3546,7 +3559,7 @@ static void fetchSensorSDS(String &s)
 	}
 	else
 	{
-		if (!is_SDS_running)
+		if (!is_SDS_running || serialSDS.available() < SDS_waiting_for)
 		{
 			is_SDS_running = SDS_cmd(PmSensorCmd::Start);
 			SDS_waiting_for = SDS_REPLY_HDR;
@@ -3639,13 +3652,13 @@ static __noinline void fetchSensorPMS(String &s)
 	char buffer;
 	int value;
 	int len = 0;
-	int pm1_serial = 0;
-	int pm10_serial = 0;
-	int pm25_serial = 0;
-	int checksum_is = 0;
-	int checksum_should = 0;
-	bool checksum_ok = false;
-	int frame_len = 24; // min. frame length
+	int pm1_serial(0);
+	int pm10_serial(0);
+	int pm25_serial(0);
+	int checksum_is(0);
+	int checksum_should(0);
+	bool checksum_ok(false);
+	int frame_len(24); // min. frame length
 
 	debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(SENSORS_PMSx003));
 	if (msSince(starttime) < (cfg::sending_intervall_ms - (WARMUPTIME_SDS_MS + READINGTIME_SDS_MS)))
@@ -3744,19 +3757,17 @@ static __noinline void fetchSensorPMS(String &s)
 				};
 				if (checksum_ok && (msSince(starttime) > (cfg::sending_intervall_ms - READINGTIME_SDS_MS)))
 				{
-					if ((!isnan(pm1_serial)) && (!isnan(pm10_serial)) && (!isnan(pm25_serial)))
-					{
-						pms_pm1_sum += pm1_serial;
-						pms_pm10_sum += pm10_serial;
-						pms_pm25_sum += pm25_serial;
-						UPDATE_MIN_MAX(pms_pm1_min, pms_pm1_max, pm1_serial);
-						UPDATE_MIN_MAX(pms_pm25_min, pms_pm25_max, pm25_serial);
-						UPDATE_MIN_MAX(pms_pm10_min, pms_pm10_max, pm10_serial);
-						debug_outln_verbose(F("PM1 (sec.): "), String(pm1_serial));
-						debug_outln_verbose(F("PM2.5 (sec.): "), String(pm25_serial));
-						debug_outln_verbose(F("PM10 (sec.) : "), String(pm10_serial));
-						pms_val_count++;
-					}
+					pms_pm1_sum += pm1_serial;
+					pms_pm10_sum += pm10_serial;
+					pms_pm25_sum += pm25_serial;
+					UPDATE_MIN_MAX(pms_pm1_min, pms_pm1_max, pm1_serial);
+					UPDATE_MIN_MAX(pms_pm25_min, pms_pm25_max, pm25_serial);
+					UPDATE_MIN_MAX(pms_pm10_min, pms_pm10_max, pm10_serial);
+					debug_outln_verbose(F("PM1 (sec.): "), String(pm1_serial));
+					debug_outln_verbose(F("PM2.5 (sec.): "), String(pm25_serial));
+					debug_outln_verbose(F("PM10 (sec.) : "), String(pm10_serial));
+					pms_val_count++;
+
 					len = 0;
 					checksum_ok = false;
 					pm1_serial = 0;
@@ -3983,7 +3994,7 @@ static void fetchSensorNPM(String &s)
 				NPM_waiting_for_16 = NPM_REPLY_HEADER_16;
 		}
 
-	
+
 		if (msSince(starttime) > (cfg::sending_intervall_ms - READINGTIME_NPM_MS))
 		{ //DIMINUER LE READING TIME
 
@@ -4001,12 +4012,12 @@ static void fetchSensorNPM(String &s)
 				uint8_t data[12];
 				uint8_t checksum[1];
 				uint8_t test[16];
-				uint16_t N1_serial;
-				uint16_t N25_serial;
-				uint16_t N10_serial;
-				uint16_t pm1_serial;
-				uint16_t pm25_serial;
-				uint16_t pm10_serial;
+				uint16_t N1_serial(0);
+				uint16_t N25_serial(0);
+				uint16_t N10_serial(0);
+				uint16_t pm1_serial(0);
+				uint16_t pm25_serial(0);
+				uint16_t pm10_serial(0);
 
 				switch (NPM_waiting_for_16)
 				{
@@ -4175,7 +4186,7 @@ static void fetchSensorIPS(String &s)
 
 			while (serialIPS.available() > 0)
 			{
-				serialIPS.read();				
+				serialIPS.read();
 			}
 
 
@@ -4198,7 +4209,7 @@ static void fetchSensorIPS(String &s)
 		}
 
 		//VIDER LE BUFFER DU START?
-	
+
 		if (msSince(starttime) > (cfg::sending_intervall_ms - READINGTIME_IPS_MS))
 		{ //DIMINUER LE READING TIME
 
@@ -4214,13 +4225,13 @@ static void fetchSensorIPS(String &s)
 
 			if (serialIPS.available() > 0)
 			{
-				serial_data = serialIPS.readString();				
+				serial_data = serialIPS.readString();
 			}
-		 
+
 
 			// while (serialIPS.available() > 0)
 			// {
-			// 	serialIPS.read();				
+			// 	serialIPS.read();
 			// }
 
 		 Debug.println(serial_data);
@@ -4242,7 +4253,7 @@ static void fetchSensorIPS(String &s)
 	int index12 = serial_data.indexOf(",PM2.5,");
 	int index13 = serial_data.indexOf(",PM5.0,");
 	int index14 = serial_data.indexOf(",PM10,");
-	int index15 = serial_data.indexOf(",IPS");	
+	int index15 = serial_data.indexOf(",IPS");
 
 	String N01_serial = serial_data.substring(index1+6,index2);
 	String N03_serial = serial_data.substring(index2+7,index3);
@@ -4303,7 +4314,7 @@ static void fetchSensorIPS(String &s)
 	UPDATE_MIN_MAX(ips_pm25_min, ips_pm25_max, pm25_serial.toFloat());
 	UPDATE_MIN_MAX(ips_pm5_min, ips_pm5_max, pm5_serial.toFloat());
 	UPDATE_MIN_MAX(ips_pm10_min, ips_pm10_max, pm10_serial.toFloat());
-	
+
 	UPDATE_MIN_MAX(ips_pm01_min_pcs, ips_pm01_max_pcs, strtoul(N01_serial.c_str(),NULL,10));
 	UPDATE_MIN_MAX(ips_pm03_min_pcs, ips_pm03_max_pcs, strtoul(N03_serial.c_str(),NULL,10));
 	UPDATE_MIN_MAX(ips_pm05_min_pcs, ips_pm05_max_pcs, strtoul(N05_serial.c_str(),NULL,10));
@@ -4944,13 +4955,17 @@ static void display_values()
 	float h_value = -1.0;
 	float p_value = -1.0;
 	String t_sensor, h_sensor, p_sensor;
+	#if defined (UNUSED_PMSIZE_COUNTERS)
 	float pm001_value = -1.0;
 	float pm003_value = -1.0;
 	float pm005_value = -1.0;
+	#endif //defined (UNUSED_PMSIZE_COUNTERS)
 	float pm25_value = -1.0;
 	float pm01_value = -1.0;
 	float pm04_value = -1.0;
+	#if defined (UNUSED_PMSIZE_COUNTERS)
 	float pm05_value = -1.0;
+	#endif //defined (UNUSED_PMSIZE_COUNTERS)
 	float pm10_value = -1.0;
 	String pm01_sensor;
 	String pm10_sensor;
@@ -4959,13 +4974,17 @@ static void display_values()
 	String pm003_sensor;
 	String pm005_sensor;
 	String pm05_sensor;
+	#if defined (UNUSED_PMSIZE_COUNTERS)
 	float nc001_value = -1.0;
 	float nc003_value = -1.0;
+	#endif //defined (UNUSED_PMSIZE_COUNTERS)
 	float nc005_value = -1.0;
 	float nc010_value = -1.0;
 	float nc025_value = -1.0;
 	float nc040_value = -1.0;
+	#if defined (UNUSED_PMSIZE_COUNTERS)
 	float nc050_value = -1.0;
+	#endif //defined (UNUSED_PMSIZE_COUNTERS)
 	float nc100_value = -1.0;
 	float la_eq_value = -1.0;
 	float la_max_value = -1.0;
@@ -5019,10 +5038,12 @@ static void display_values()
 		pm01_value = last_value_IPS_P0;
 		pm10_value = last_value_IPS_P1;
 		pm25_value = last_value_IPS_P2;
+		#if defined (UNUSED_PMSIZE_COUNTERS)
 		pm001_value = last_value_IPS_P01;
 		pm003_value = last_value_IPS_P03;
 		pm005_value = last_value_IPS_P05;
 		pm05_value = last_value_IPS_P5;
+		#endif //defined (UNUSED_PMSIZE_COUNTERS)
 		pm001_sensor = FPSTR(SENSORS_IPS);
 		pm003_sensor = FPSTR(SENSORS_IPS);
 		pm005_sensor = FPSTR(SENSORS_IPS);
@@ -5033,10 +5054,14 @@ static void display_values()
 		nc010_value = last_value_IPS_N1;
 		nc100_value = last_value_IPS_N10;
 		nc025_value = last_value_IPS_N25;
+		#if defined (UNUSED_PMSIZE_COUNTERS)
 		nc001_value = last_value_IPS_N01;
 		nc003_value = last_value_IPS_N03;
+		#endif //defined (UNUSED_PMSIZE_COUNTERS)
 		nc005_value = last_value_IPS_N05;
+		#if defined (UNUSED_PMSIZE_COUNTERS)
 		nc050_value = last_value_IPS_N5;
+		#endif //defined (UNUSED_PMSIZE_COUNTERS)
 	}
 	if (cfg::sps30_read)
 	{
@@ -5119,7 +5144,7 @@ static void display_values()
 	if (cfg::npm_read)
 	{
 		screens[screen_count++] = 9;
-		screens[screen_count++] = 10; 
+		screens[screen_count++] = 10;
 	}
 	if (cfg::ips_read)
 	{
@@ -5422,13 +5447,13 @@ static void init_display()
 	}
 	if (cfg::has_lcd1602) {
 		lcd_1602 = new LiquidCrystal_I2C(
-			lcd_1602_default_i2c_address, 
-			lcd_1602_columns, 
+			lcd_1602_default_i2c_address,
+			lcd_1602_columns,
 			lcd_1602_rows);
 	} else if (cfg::has_lcd1602_27) {
 		lcd_1602 = new LiquidCrystal_I2C(
-			lcd_1602_alternate_i2c_address, 
-			lcd_1602_columns, 
+			lcd_1602_alternate_i2c_address,
+			lcd_1602_columns,
 			lcd_1602_rows);
 	}
 	if (lcd_1602)
@@ -5438,13 +5463,13 @@ static void init_display()
 	}
 	if (cfg::has_lcd2004) {
 		lcd_2004 = new LiquidCrystal_I2C(
-			lcd_2004_default_i2c_address, 
-			lcd_2004_columns, 
+			lcd_2004_default_i2c_address,
+			lcd_2004_columns,
 			lcd_2004_rows);
 	} else if (cfg::has_lcd2004_27) {
 		lcd_2004 = new LiquidCrystal_I2C(
-			lcd_2004_alternate_i2c_address, 
-			lcd_2004_columns, 
+			lcd_2004_alternate_i2c_address,
+			lcd_2004_columns,
 			lcd_2004_rows);
 	}
 	if (lcd_2004)
@@ -5474,7 +5499,8 @@ static bool initBMX280(char addr)
 			BMX280::MODE_FORCED,
 			BMX280::SAMPLING_X1,
 			BMX280::SAMPLING_X1,
-			BMX280::SAMPLING_X1);
+			BMX280::SAMPLING_X1,
+			BMX280::IIR_16);
 		return true;
 	}
 	else
@@ -5630,8 +5656,10 @@ static void powerOnTestSensors()
 				// 	is_NPM_running = NPM_start_stop();
 				// 	delay(5000);
 				// }
-				// NPM_fan_speed();
-				// delay(5000);
+				#if defined (NPM_FORCE_FAN_SPEED) && (NPM_FORCE_FAN_SPEED>0)
+				NPM_fan_speed();
+				delay(5000);
+				#endif //NPM_FORCE_FAN_SPEED setting
 			}
 			if (bitRead(test_state, 6) == 1)
 			{
@@ -5657,7 +5685,7 @@ static void powerOnTestSensors()
 		NPM_version_date();
 		delay(3000); //prevent any buffer overload on ESP82666
 		NPM_temp_humi();
-		delay(2000); 
+		delay(2000);
 
 		if(!cfg::npm_fulltime) {
 			is_NPM_running = NPM_start_stop();
@@ -5677,7 +5705,7 @@ static void powerOnTestSensors()
 		delay(1000);
 		IPS_cmd(PmSensorCmd3::Interval); //Set interval to 0 = manual mode
 		delay(1000);
-		IPS_cmd(PmSensorCmd3::Stop); 
+		IPS_cmd(PmSensorCmd3::Stop);
 		delay(1000);
 		is_IPS_running = false;
 	}
@@ -5860,7 +5888,14 @@ static unsigned long sendDataToOptionalApis(const String &data)
 	{
 		debug_outln_info(FPSTR(DBG_TXT_SENDING_TO), F("opensensemap: "));
 		String sensemap_path(tmpl(FPSTR(URL_SENSEMAP), cfg::senseboxid));
-		sum_send_time += sendData(LoggerSensemap, data, 0, HOST_SENSEMAP, sensemap_path.c_str());
+		if (*cfg::osem_alternate_host)
+		{
+			sum_send_time += sendData(LoggerSensemap, data, 0, cfg::osem_alternate_host, sensemap_path.c_str());
+		}
+		else
+		{
+			sum_send_time += sendData(LoggerSensemap, data, 0, HOST_SENSEMAP, sensemap_path.c_str());
+		}
 	}
 
 	if (cfg::send2fsapp)
@@ -5948,7 +5983,7 @@ void setup(void)
 	}
 #endif
 
-	init_config(); 
+	init_config();
 
 	Wire.begin(I2C_PIN_SDA, I2C_PIN_SCL);
 
@@ -6055,8 +6090,8 @@ void loop(void)
 
 	unsigned int pastTime = act_milli - last_page_load;
 	bool keepAlive = pastTime < KEEP_ALIVE_TIME_MS;
-	unsigned long sleep = send_now || keepAlive 
-		? 0 
+	unsigned long sleep = send_now || keepAlive
+		? 0
 		: SLEEPTIME_MS;
 
 	// Wait at least 30s for each NTP server to sync
@@ -6125,7 +6160,7 @@ void loop(void)
 		{
 			starttime_NPM = act_milli;
 			fetchSensorNPM(result_NPM);
-		}	
+		}
 	}
 	if(cfg::ips_read)
 	{
@@ -6133,7 +6168,7 @@ void loop(void)
 		{
 			starttime_IPS = act_milli;
 			fetchSensorIPS(result_IPS);
-		}	
+		}
 	}
 	if ((msSince(starttime_SDS) > SAMPLETIME_SDS_MS) || send_now)
 	{
@@ -6172,13 +6207,6 @@ void loop(void)
 	{
 		fetchSensorSCD30(result_SCD30);
 		last_scd30_millis = act_milli;
-	}
-
-	if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) &&
-		(cfg::has_display || cfg::has_sh1106 || lcd_1602 || lcd_2004))
-	{
-		display_values();
-		last_display_millis = act_milli;
 	}
 
 	server.handleClient();
@@ -6361,6 +6389,13 @@ void loop(void)
 		sum_send_time = 0;
 		starttime = millis(); // store the start time
 		count_sends++;
+	}
+
+	if ((msSince(last_display_millis) > DISPLAY_UPDATE_INTERVAL_MS) &&
+		(cfg::has_display || cfg::has_sh1106 || lcd_1602 || lcd_2004))
+	{
+		display_values();
+		last_display_millis = act_milli;
 	}
 
 #if defined(ESP8266)

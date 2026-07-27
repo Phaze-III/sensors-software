@@ -92,7 +92,7 @@ const char INTL_DEVICE_STATUS[] PROGMEM = "Enhetsstatus";
 #define INTL_CONFIGURATION_REALLY_DELETE "Ska konfigurationen tas bort?"
 #define INTL_DELETE "Ta bort"
 #define INTL_CANCEL "Avbryt"
-#define INTL_REALLY_RESTART_SENSOR "Config.json kunde inte hittas"
+#define INTL_REALLY_RESTART_SENSOR "Verkligen starta om sensor?"
 #define INTL_RESTART "Starta om"
 const char INTL_SAVE_AND_RESTART[] PROGMEM = "Spara och starta om";
 #define INTL_FIRMWARE "Firmware"
@@ -129,5 +129,14 @@ const char INTL_SIGNAL_QUALITY[] PROGMEM = "Kvalitet";
 #define INTL_SENSOR "Sensor"
 #define INTL_PARAMETER "Parameter"
 #define INTL_VALUE "Värde"
+#define INTL_DATA_SEND_RETURN_CODE "[[Data Send Return]]"
+#define INTL_UPTIME "[[Uptime]]"
+#define INTL_RESET_REASON "[[Reset Reason]]"
+#define INTL_HEAP_FRAGMENTATION "[[Heap Fragmentation]]"
+#define INTL_FREE_MEMORY "[[Free Memory]]"
+#define INTL_REACHABLE "[[reachable]]"
+#define INTL_YES "[[Yes]]"
+#define INTL_NO "[[No]]"
+#define INTL_LAST_OVER_THE_AIR "[[Last OTA]]"
 
 #include "./airrohr-logo-common.h"

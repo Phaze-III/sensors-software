@@ -38,8 +38,8 @@ const char INTL_DS18B20[] PROGMEM = "DS18B20 ({t})";
 const char INTL_DNMS[] PROGMEM = "DNMS ({l_a})";
 const char INTL_DNMS_CORRECTION[] PROGMEM = "Correzione in dB(A)";
 const char INTL_TEMP_CORRECTION[] PROGMEM = "Correzione in °C";
-const char INTL_HEIGHT_ABOVE_SEALEVEL[] PROGMEM = "[[Altitudine]]";
-const char INTL_PRESSURE_AT_SEALEVEL[] PROGMEM = "[[Pressione al livello del mare]]";
+const char INTL_HEIGHT_ABOVE_SEALEVEL[] PROGMEM = "Altitudine";
+const char INTL_PRESSURE_AT_SEALEVEL[] PROGMEM = "Pressione al livello del mare";
 const char INTL_NEO6M[] PROGMEM = "GPS (NEO 6M)";
 const char INTL_BASICAUTH[] PROGMEM = "Autorizzazione";
 #define INTL_REPORT_ISSUE "Segnala un problema"
@@ -129,5 +129,14 @@ const char INTL_SIGNAL_QUALITY[] PROGMEM = "Qualità del segnale";
 #define INTL_SENSOR "Sensore"
 #define INTL_PARAMETER "Parametro"
 #define INTL_VALUE "Valore"
+#define INTL_DATA_SEND_RETURN_CODE "[[Data Send Return]]"
+#define INTL_UPTIME "[[Uptime]]"
+#define INTL_RESET_REASON "[[Reset Reason]]"
+#define INTL_HEAP_FRAGMENTATION "[[Heap Fragmentation]]"
+#define INTL_FREE_MEMORY "[[Free Memory]]"
+#define INTL_REACHABLE "[[reachable]]"
+#define INTL_YES "[[Yes]]"
+#define INTL_NO "[[No]]"
+#define INTL_LAST_OVER_THE_AIR "[[Last OTA]]"
 
 #include "./airrohr-logo-common.h"
