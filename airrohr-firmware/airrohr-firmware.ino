@@ -4825,6 +4825,14 @@ static bool fwDownloadStreamFile(WiFiClientSecure &client, const String &url, co
 static void twoStageOTAUpdate()
 {
 
+// Disable Auto-Update (no OTA-infrastructure for these builds)
+	if (cfg::auto_update)
+	{
+		debug_outln_info(F("Disabling Auto-Update..."));
+		cfg::auto_update = false;
+	}
+// End of Disable Auto-Update
+
 	if (!cfg::auto_update)
 		return;
 
