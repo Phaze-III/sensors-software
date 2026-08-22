@@ -3013,6 +3013,9 @@ static void connectWifi()
 		}
 	}
 	debug_outln_info(F("WiFi connected, IP is: "), WiFi.localIP().toString());
+	debug_outln_info(F("DNS server 1 is: "), WiFi.dnsIP(0).toString());
+	debug_outln_info(F("DNS server 2 is: "), WiFi.dnsIP(1).toString());
+
 	last_signal_strength = WiFi.RSSI();
 
 	if (MDNS.begin(cfg::fs_ssid))
@@ -3094,6 +3097,7 @@ static unsigned long sendData(const LoggerEntry logger, const String &data, cons
 	{
 		http.setAuthorization(cfg::user_influx, cfg::pwd_influx);
 	}
+
 	if (http.begin(*client, s_Host, loggerConfigs[logger].destport, s_url, !!loggerConfigs[logger].session))
 	{
 		http.addHeader(F("Content-Type"), contentType);
