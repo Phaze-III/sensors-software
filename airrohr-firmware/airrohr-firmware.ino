@@ -92,6 +92,10 @@ String SOFTWARE_VERSION(SOFTWARE_VERSION_STR);
 #include <ESPmDNS.h>
 #endif
 
+#if LWIP_IPV6
+#include <lwip/dns.h>
+#endif
+
 // includes common to ESP8266 and ESP32 (especially external libraries)
 #include "./oledfont.h" // avoids including the default Arial font, needs to be included before SSD1306.h
 #include <SSD1306.h>
@@ -2914,6 +2918,108 @@ static void wifiConfig()
 	wificonfig_loop = false;
 }
 
+#if LWIP_IPV6
+/*****************************************************************
+ * Helper functions to prefer IPv6 connections when available    *
+ *****************************************************************/
+
+bool ipv6_configured = false;
+
+bool checkIPv6Connection() {
+	for (auto a : addrList) {
+		if (a.isV6() && !a.isLocal()) {
+			if (!ipv6_configured) {
+				ipv6_configured = true;
+				debug_outln_info(F("IPv6 is: "), a.toString().c_str());
+			}
+			return true;
+		}
+	}
+	ipv6_configured = false;
+	return false;
+}
+
+/**
+ * Resolves a hostname to an IPAddress using the available network capabilities.
+ * @param host The hostname string to resolve.
+ * @param outIP Reference to the IPAddress object where the result will be stored.
+ * @param timeoutMs Timeout for the DNS query in milliseconds (default: 5000).
+ * @return true if resolution succeeded, false otherwise.
+ */
+bool resolveHostToIP(const String& host, IPAddress& outIP, uint32_t timeoutMs = 5000) {
+	DNSResolveType resolveType = DNSResolveType::DNS_AddrType_IPv4;
+
+	if (checkIPv6Connection())
+	{
+		resolveType = DNSResolveType::DNS_AddrType_IPv6_IPv4;
+	}
+
+	if (WiFi.hostByName(host.c_str(), outIP, timeoutMs, resolveType) && outIP != IPAddress(255, 255, 255, 255) && outIP != IPAddress(0, 0, 0, 0))
+	{
+		debug_outln_verbose(F("DNS resolved to IP: "), outIP.toString());
+		return true;
+	} else {
+		debug_outln_info(F("DNS lookup failed."));
+		return false;
+	}
+}
+
+/**
+ * Establishes a connection to a host, bypassing DNS to a specific IP,
+ * while maintaining proper SNI headers for HTTPS.
+ *
+ * @param client Shared or unique pointer wrapper containing the WiFiClient/WiFiClientSecure object
+ * @param host The target hostname string (used for SNI)
+ * @param targetIP The specific IPv4/IPv6 address to route to
+ * @param port The destination port (e.g., 80 or 443)
+ * @param isHttps Set to true for BearSSL HTTPS with SNI, false for plain HTTP
+ * @return true if connection succeeded, false otherwise
+ */
+
+static ip_addr_t forced_lwip_ip;
+
+void custom_dns_callback(const char *name, const ip_addr_t *ipaddr, void *callback_arg)
+{
+	// Empty so no DNS resolution after connecting with connectToHostBypassingDNS()
+}
+
+bool connectToHostBypassingDNS(WiFiClient &client, const String& host, const IPAddress& targetIP, uint16_t port, bool isHttps) {
+
+	bool connectionSuccess = false;
+
+	if (isHttps)
+	{
+		auto& secureClient = static_cast<BearSSL::WiFiClientSecure&>(client);
+
+		forced_lwip_ip = targetIP;
+
+		// Inject the IP address direct into the active DNS table for host.
+		dns_gethostbyname(host.c_str(), &forced_lwip_ip, custom_dns_callback, NULL);
+
+		// Connect using hostname needed for SNI
+		debug_outln_info(F("Secure connection to: "), host + " at " + targetIP.toString());
+		connectionSuccess = secureClient.connect(host.c_str(), port);
+	} else {
+		// Plain HTTP: connect to IP-address, vhosts will be handled in the http.begin calls
+		debug_outln_info(F("Regular connection to: "), host + " at " + targetIP.toString());
+		connectionSuccess = client.connect(targetIP, port);
+	}
+
+	return connectionSuccess;
+}
+// Function overload for std::unique_ptr<WiFiClient> reference in sendData()
+bool connectToHostBypassingDNS(std::unique_ptr<WiFiClient>& client, const String& host, const IPAddress& targetIP, uint16_t port, bool isHttps)
+{
+	return connectToHostBypassingDNS(*client.get(), host, targetIP, port, isHttps);
+}
+
+// Function overload for WiFiClientSecure reference in fwDownloadStream()
+bool connectToHostBypassingDNS(WiFiClientSecure &client, const String& host, const IPAddress& targetIP, uint16_t port, bool isHttps)
+{
+	return connectToHostBypassingDNS(static_cast<WiFiClient&>(client), host, targetIP, port, isHttps);
+}
+#endif
+
 static void waitForWifiToConnect(int maxRetries)
 {
 	int retryCount = 0;
@@ -3016,6 +3122,34 @@ static void connectWifi()
 	debug_outln_info(F("DNS server 1 is: "), WiFi.dnsIP(0).toString());
 	debug_outln_info(F("DNS server 2 is: "), WiFi.dnsIP(1).toString());
 
+#if LWIP_IPV6
+	delay(4000); // Wait for IPv6 autoconfig
+	checkIPv6Connection();
+
+	/*
+	// Local address debugging
+	for (auto a : addrList)
+	{
+		Debug.printf("IF='%s' IPv6=%d local=%d hostname='%s' addr= %s",
+			a.ifname().c_str(),
+			a.isV6(),
+			a.isLocal(),
+			a.ifhostname(),
+			a.toString().c_str());
+
+		if (a.isLegacy())
+		{
+			Debug.printf(" / mask:%s / gw:%s",
+				a.netmask().toString().c_str(),
+				a.gw().toString().c_str());
+		}
+
+		Debug.println();
+	}
+	// End Local address debugging
+	*/
+#endif
+
 	last_signal_strength = WiFi.RSSI();
 
 	if (MDNS.begin(cfg::fs_ssid))
@@ -3098,6 +3232,16 @@ static unsigned long sendData(const LoggerEntry logger, const String &data, cons
 		http.setAuthorization(cfg::user_influx, cfg::pwd_influx);
 	}
 
+#if LWIP_IPV6
+	IPAddress targetIP;
+	bool isHttps = (loggerConfigs[logger].session != nullptr);
+	uint16_t targetPort = loggerConfigs[logger].destport;
+
+	if (resolveHostToIP(s_Host, targetIP))
+	{
+		if (connectToHostBypassingDNS(client, s_Host, targetIP, targetPort, isHttps))
+		{
+#endif
 	if (http.begin(*client, s_Host, loggerConfigs[logger].destport, s_url, !!loggerConfigs[logger].session))
 	{
 		http.addHeader(F("Content-Type"), contentType);
@@ -3128,8 +3272,27 @@ static unsigned long sendData(const LoggerEntry logger, const String &data, cons
 		}
 		http.end();
 	}
+#if LWIP_IPV6
+		}
+		else
+		{
+			// Set 'connection failed' when connectToHostBypassingDNS() fails
+			// No specific details are available
+			result = -1;
+		}  // end connectToHostBypassingDNS wrapper
+	}  // end resolveHostToIP wrapper
+#endif
 	else
 	{
+#if LWIP_IPV6
+		// Set 'connection failed' when resolveHostToIP() fails
+		// No specific details are available
+		result = -1;
+	}
+
+	if (result < 0)
+	{
+#endif
 		debug_outln_info(F("Failed connecting to "), s_Host);
 	}
 
@@ -4708,6 +4871,13 @@ static bool fwDownloadStream(WiFiClientSecure &client, const String &url, Stream
 
 	debug_outln_verbose(F("HTTP GET: "), String(FPSTR(FW_DOWNLOAD_HOST)) + ':' + String(FW_DOWNLOAD_PORT) + url);
 
+#if LWIP_IPV6
+	IPAddress targetIP;
+	if (resolveHostToIP(FPSTR(FW_DOWNLOAD_HOST), targetIP))
+	{
+		if (connectToHostBypassingDNS(client, FPSTR(FW_DOWNLOAD_HOST), targetIP, FW_DOWNLOAD_PORT, true))
+		{
+#endif
 	if (http.begin(client, FPSTR(FW_DOWNLOAD_HOST), FW_DOWNLOAD_PORT, url))
 	{
 		int r = http.GET();
@@ -4719,7 +4889,18 @@ static bool fwDownloadStream(WiFiClientSecure &client, const String &url, Stream
 		}
 		http.end();
 	}
-
+#if LWIP_IPV6
+		}
+		else
+		{
+			last_update_returncode = -1;
+		} // end connectToHostBypassingDNS wrapper
+	}
+	else
+	{
+		last_update_returncode = -1;
+	}  // end resolveHostToIP wrapper
+#endif
 	debug_outln_verbose(F("bytes written: "), String(bytes_written));
 
 	if (bytes_written > 0)
