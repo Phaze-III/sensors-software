@@ -3126,28 +3126,28 @@ static void connectWifi()
 	delay(4000); // Wait for IPv6 autoconfig
 	checkIPv6Connection();
 
-	/*
 	// Local address debugging
-	for (auto a : addrList)
+	if (cfg::debug > DEBUG_MIN_INFO)
 	{
-		Debug.printf("IF='%s' IPv6=%d local=%d hostname='%s' addr= %s",
-			a.ifname().c_str(),
-			a.isV6(),
-			a.isLocal(),
-			a.ifhostname(),
-			a.toString().c_str());
-
-		if (a.isLegacy())
+		for (auto a : addrList)
 		{
-			Debug.printf(" / mask:%s / gw:%s",
+			Debug.printf("IF='%s' IPv6=%d local=%d hostname='%s' addr= %s",
+				a.ifname().c_str(),
+				a.isV6(),
+				a.isLocal(),
+				a.ifhostname(),
+				a.toString().c_str());
+
+			if (a.isLegacy())
+			{
+				Debug.printf(" / mask:%s / gw:%s",
 				a.netmask().toString().c_str(),
 				a.gw().toString().c_str());
-		}
-
+			}
 		Debug.println();
+		}
 	}
 	// End Local address debugging
-	*/
 #endif
 
 	last_signal_strength = WiFi.RSSI();
