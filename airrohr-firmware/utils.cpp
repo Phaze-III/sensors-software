@@ -118,7 +118,13 @@ String wlan_ssid_to_table_row(const String& ssid, const String& encryption, int3
 					"{v}%"
 					"</td>"
 					"</tr>");
-	s.replace("{n}", ssid);
+	String escaped_ssid = ssid;
+	escaped_ssid.replace("&", "&amp;");
+	escaped_ssid.replace("<", "&lt;");
+	escaped_ssid.replace(">", "&gt;");
+	escaped_ssid.replace("\"", "&quot;");
+	escaped_ssid.replace("'", "&#39;");
+	s.replace("{n}", escaped_ssid);
 	s.replace("{e}", encryption);
 	s.replace("{v}", String(calcWiFiSignalQuality(rssi)));
 	return s;
