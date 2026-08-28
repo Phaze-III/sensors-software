@@ -4721,8 +4721,13 @@ static bool fwDownloadStream(WiFiClientSecure &client, const String &url, Stream
 	if (bytes_written > 0)
 		return true;
 
-	last_update_returncode = bytes_written ;
-	Debug.println( http.errorToString(bytes_written) );
+	if (bytes_written < -1 )
+		last_update_returncode = bytes_written ;
+
+	debug_outln_verbose(F("last update returncode: "), String(last_update_returncode));
+
+	debug_outln_info(F("OTA Return: "), last_update_returncode > 0 ? String(last_update_returncode) : http.errorToString(last_update_returncode));
+
 	return false;
 }
 
