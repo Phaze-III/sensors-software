@@ -5975,6 +5975,11 @@ static void logEnabledDisplays()
 	}
 }
 
+#if LWIP_IPV6
+unsigned long last_sntp_sync = 0;
+bool dns_primed_for_next_sntp_sync = false;
+#endif
+
 static void setupNetworkTime()
 {
 	// server name ptrs must be persisted after the call to configTime because internally
@@ -5983,6 +5988,10 @@ static void setupNetworkTime()
 #if defined(ESP8266)
 	settimeofday_cb([]()
 					{
+#if LWIP_IPV6
+						last_sntp_sync = millis();
+						dns_primed_for_next_sntp_sync = false;
+#endif
 						if (!sntp_time_set)
 						{
 							time_t now = time(nullptr);
@@ -5995,6 +6004,19 @@ static void setupNetworkTime()
 #endif
 	strcpy_P(ntpServer1, NTP_SERVER_1);
 	strcpy_P(ntpServer2, NTP_SERVER_2);
+
+#if LWIP_IPV6
+	// Prime the local DNS cache, prefer AAAA records when IPv6 connected
+	// configTime() will use the local cache for the server names
+	IPAddress ntpServer1_IP, ntpServer2_IP;
+
+	resolveHostToIP(ntpServer1, ntpServer1_IP);
+	debug_outln_verbose(F("NTP 1: "), String(ntpServer1) + " primed at " + ntpServer1_IP.toString());
+	resolveHostToIP(ntpServer2, ntpServer2_IP);
+	debug_outln_verbose(F("NTP 2: "), String(ntpServer2) + " primed at " + ntpServer2_IP.toString());
+	dns_primed_for_next_sntp_sync = true;
+#endif
+
 	configTime(0, 0, ntpServer1, ntpServer2);
 }
 
@@ -6227,6 +6249,31 @@ void loop(void)
 		starttime = act_milli;
 	}
 
+#if LWIP_IPV6
+	// Prime the local DNS cache for the configured NTP-servers 60 seconds
+	// before the next sync, prefer AAAA records when IPv6 connected.
+	// LWIP SNTP sync will use the local cache for the server names.
+	if (sntp_time_set > 0 && !dns_primed_for_next_sntp_sync)
+	{
+		unsigned long elapsed = millis() - last_sntp_sync;
+
+		if (elapsed >= SNTP_UPDATE_DELAY - 60000)
+		{
+			IPAddress ntpServerIP;
+			for (unsigned i = 0; i < SNTP_MAX_SERVERS; i++)
+			{
+				if (sntp_getservername(i))
+				{
+					resolveHostToIP(sntp_getservername(i), ntpServerIP);
+					debug_outln_verbose(F("NTP "), String(i) + ": " + String(sntp_getservername(i)) + " primed at " + ntpServerIP.toString().c_str());
+				}
+			}
+			dns_primed_for_next_sntp_sync = true;
+			time_t now = time(nullptr);
+			debug_outln_info(F("SNTP DNS primed: "), ctime(&now));
+		}
+	}
+#endif
 	sample_count++;
 	if (last_micro != 0)
 	{
