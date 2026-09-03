@@ -1163,7 +1163,26 @@ static void readConfig(bool oldconfig = false)
 
 		if (cfg::debug > DEBUG_MIN_INFO)
 		{
-			serializeJsonPretty(json, Debug); Debug.print('\n');
+			// Mask non-empty password fields before printing to serial/UI
+			DynamicJsonDocument maskedJson = json;
+
+			if (maskedJson.containsKey("wlanpwd") && maskedJson["wlanpwd"].as<String>().length() > 0) {
+				maskedJson["wlanpwd"] = "********";
+			}
+			if (maskedJson.containsKey("www_password") && maskedJson["www_password"].as<String>().length() > 0) {
+				maskedJson["www_password"] = "********";
+			}
+			if (maskedJson.containsKey("fs_pwd") && maskedJson["fs_pwd"].as<String>().length() > 0) {
+				maskedJson["fs_pwd"] = "********";
+			}
+			if (maskedJson.containsKey("pwd_custom") && maskedJson["pwd_custom"].as<String>().length() > 0) {
+				maskedJson["pwd_custom"] = "********";
+			}
+			if (maskedJson.containsKey("pwd_influx") && maskedJson["pwd_influx"].as<String>().length() > 0) {
+				maskedJson["pwd_influx"] = "********";
+			}
+
+			serializeJsonPretty(maskedJson, Debug); Debug.print('\n');
 		}
 
 		String writtenVersion(json["SOFTWARE_VERSION"].as<const char *>());
